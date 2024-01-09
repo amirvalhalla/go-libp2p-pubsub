@@ -65,6 +65,8 @@ type PubSub struct {
 
 	peerFilter PeerFilter
 
+	messageFilter MessageFilter
+
 	// maxMessageSize is the maximum message size; it applies globally to all
 	// topics.
 	maxMessageSize int
@@ -255,6 +257,7 @@ func NewPubSub(ctx context.Context, h host.Host, rt PubSubRouter, opts ...Option
 		rt:                    rt,
 		val:                   newValidation(),
 		peerFilter:            DefaultPeerFilter,
+		messageFilter:         DefaultMessageFilter,
 		disc:                  &discover{},
 		maxMessageSize:        DefaultMaxMessageSize,
 		peerOutboundQueueSize: 32,
@@ -363,6 +366,20 @@ type PeerFilter func(pid peer.ID, topic string) bool
 func WithPeerFilter(filter PeerFilter) Option {
 	return func(p *PubSub) error {
 		p.peerFilter = filter
+		return nil
+	}
+}
+
+// MessageFilter is used to filter outgoing messages. It should return true to send a message to
+// the peer with the given pid. If it returns false, the message won't be sent.
+type MessageFilter func(pid peer.ID, topic string, msgID string) bool
+
+// WithMessageFilter is an option to set a filter for publishing messages.
+// The default message filter is DefaultMessageFilter (which always returns true), but it can be customized
+// to any custom implementation.
+func WithMessageFilter(filter MessageFilter) Option {
+	return func(p *PubSub) error {
+		p.messageFilter = filter
 		return nil
 	}
 }
@@ -1111,6 +1128,11 @@ func DefaultMsgIdFn(pmsg *pb.Message) string {
 
 // DefaultPeerFilter accepts all peers on all topics
 func DefaultPeerFilter(pid peer.ID, topic string) bool {
+	return true
+}
+
+// DefaultMessageFilter publishes message to the all peers
+func DefaultMessageFilter(pid peer.ID, topic string, msgID string) bool {
 	return true
 }
 

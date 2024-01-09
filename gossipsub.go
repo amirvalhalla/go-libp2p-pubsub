@@ -1040,6 +1040,10 @@ func (gs *GossipSubRouter) Publish(msg *Message) {
 			continue
 		}
 
+		if !gs.p.messageFilter(pid, topic, msg.ID) {
+			continue
+		}
+
 		gs.sendRPC(pid, out)
 	}
 }
